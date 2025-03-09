@@ -1,4 +1,4 @@
-name: Laravel Lint
+name: Laravel Code Quality
 
 on:
   push:
@@ -10,25 +10,36 @@ on:
 
 jobs:
   lint:
-    name: Run PHP CodeSniffer
+    name: Lint PHP Code
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, exif, pcntl, bcmath
-          tools: composer
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json
+          tools: composer, php-cs-fixer, phpcs
 
-      - name: Install Dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
 
-      - name: Install PHP CodeSniffer
-        run: composer require --dev squizlabs/php_codesniffer
-
-      - name: Run PHP CodeSniffer
+      - name: Run PHP CodeSniffer (PSR-12)
         run: vendor/bin/phpcs --standard=PSR12 app/ routes/
+
+      - name: Fix code style issues with PHPCBF
+        run: vendor/bin/phpcbf --standard=PSR12 app/ routes/
+
+      - name: Run Laravel Pint
+        run: vendor/bin/pint --test
+
+      - name: Commit changes if fixes were made
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add .
+          git diff --staged --quiet || git commit -m "Apply PHP Code style fixes"
+          git push
